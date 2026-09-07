@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Night Shift // Open City</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Space+Mono:wght@400;700&display=swap");
+      :root {
+        --acid: #d8ff45;
+        --ink: #10120f;
+        --paper: #eef0e8;
+        --red: #ff5e54;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #101210;
+        color: var(--paper);
+      }
+      body {
+        font-family: "Barlow Condensed", sans-serif;
+        letter-spacing: 0.04em;
+      }
+      #game {
+        position: fixed;
+        inset: 0;
+      }
+      canvas {
+        display: block;
+      }
+      #hud {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        user-select: none;
+      }
+      .topbar {
+        position: absolute;
+        top: 22px;
+        left: 25px;
+        right: 25px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+      .brand {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      .mark {
+        width: 38px;
+        height: 38px;
+        background: var(--acid);
+        color: var(--ink);
+        display: grid;
+        place-items: center;
+        font-size: 21px;
+        font-weight: 800;
+        transform: skew(-10deg);
+      }
+      .brand strong {
+        display: block;
+        font-size: 23px;
+        line-height: 0.9;
+        letter-spacing: 0.02em;
+      }
+      .brand small {
+        color: var(--acid);
+        font:
+          10px "Space Mono",
+          monospace;
+        letter-spacing: 0.14em;
+      }
+      .wanted {
+        text-align: right;
+        font:
+          17px "Space Mono",
+          monospace;
+        color: #67706a;
+        letter-spacing: 3px;
+      }
+      .wanted b {
+        color: var(--acid);
+      }
+      .mission {
+        position: absolute;
+        top: 92px;
+        left: 25px;
+        border-left: 3px solid var(--acid);
+        padding: 5px 0 5px 12px;
+      }
+      .mission small {
+        color: var(--acid);
+        font:
+          10px "Space Mono",
+          monospace;
+      }
+      .mission div {
+        margin-top: 3px;
+        font-size: 19px;
+        font-weight: 700;
+      }
+      #crosshair {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 22px;
+        height: 22px;
+        transform: translate(-50%, -50%);
+        opacity: 0.85;
+      }
+      #crosshair::before,
+      #crosshair::after {
+        content: "";
+        position: absolute;
+        background: var(--acid);
+        box-shadow: 0 0 7px var(--acid);
+      }
+      #crosshair::before {
+        width: 2px;
+        height: 22px;
+        left: 10px;
+        top: 0;
+      }
+      #crosshair::after {
+        height: 2px;
+        width: 22px;
+        left: 0;
+        top: 10px;
+      }
+      .bottom {
+        position: absolute;
+        bottom: 24px;
+        left: 25px;
+        right: 25px;
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+      }
+      .stats {
+        width: 205px;
+      }
+      .label {
+        font:
+          10px "Space Mono",
+          monospace;
+        color: #adb5ad;
+        margin-bottom: 5px;
+      }
+      .bar {
+        height: 8px;
+        background: #26302a;
+        margin-bottom: 9px;
+      }
+      .bar span {
+        display: block;
+        height: 100%;
+        width: 82%;
+        background: var(--acid);
+        transition: width 0.2s;
+      }
+      .bar.ammo span {
+        background: var(--red);
+        width: 74%;
+      }
+      .ammo-count {
+        font:
+          27px "Space Mono",
+          monospace;
+        color: white;
+        margin-top: -4px;
+      }
+      .ammo-count em {
+        color: #768078;
+        font-style: normal;
+        font-size: 14px;
+      }
+      .hint {
+        color: #d0d4cb;
+        font:
+          10px "Space Mono",
+          monospace;
+        text-align: right;
+        line-height: 1.9;
+        opacity: 0.8;
+      }
+      #toast {
+        position: absolute;
+        left: 50%;
+        top: 72%;
+        transform: translate(-50%, -50%);
+        font-size: 31px;
+        font-weight: 800;
+        color: var(--acid);
+        text-shadow: 0 3px 0 #121612;
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+      #intro {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: rgba(7, 9, 7, 0.78);
+        z-index: 3;
+        transition: opacity 0.35s;
+      }
+      .panel {
+        width: min(520px, calc(100vw - 40px));
+        padding: 42px;
+        border: 1px solid #525d4d;
+        background: rgba(17, 22, 17, 0.95);
+        box-shadow: 12px 12px 0 rgba(216, 255, 69, 0.12);
+      }
+      .panel h1 {
+        margin: 0;
+        color: var(--acid);
+        font-size: 56px;
+        line-height: 0.82;
+        letter-spacing: -0.02em;
+      }
+      .panel p {
+        color: #c0c8bb;
+        line-height: 1.4;
+        max-width: 390px;
+      }
+      .panel .keys {
+        color: white;
+        font:
+          11px "Space Mono",
+          monospace;
+        line-height: 2;
+        margin: 25px 0;
+      }
+      .start {
+        border: 0;
+        background: var(--acid);
+        color: var(--ink);
+        padding: 13px 19px;
+        font:
+          800 16px "Barlow Condensed",
+          sans-serif;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+      }
+      .start:hover {
+        background: white;
+      }
+      .hide {
+        opacity: 0;
+        pointer-events: none;
+      }
+      @media (max-width: 600px) {
+        .topbar {
+          top: 14px;
+          left: 15px;
+          right: 15px;
+        }
+        .mission {
+          top: 75px;
+          left: 15px;
+        }
+        .bottom {
+          left: 15px;
+          right: 15px;
+          bottom: 15px;
+        }
+        .hint {
+          display: none;
+        }
+        .panel {
+          padding: 28px;
+        }
+        .panel h1 {
+          font-size: 44px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <div id="hud">
+      <div class="topbar">
+        <div class="brand">
+          <div class="mark">N</div>
+          <div>
+            <strong>NIGHT SHIFT</strong><small>SECTOR 04 // AFTER HOURS</small>
+          </div>
+        </div>
+        <div class="wanted"><b>◆</b> <b>◆</b> <span>◆ ◆ ◆</span></div>
+      </div>
+      <div class="mission">
+        <small>ACTIVE CONTRACT / 01</small>
+        <div>Clear the block</div>
+      </div>
+      <div id="crosshair"></div>
+      <div id="toast"></div>
+      <div class="bottom">
+        <div class="stats">
+          <div class="label">VITALS</div>
+          <div class="bar"><span id="health"></span></div>
+          <div class="label">SIDEARM / 9MM</div>
+          <div class="bar ammo"><span id="ammoBar"></span></div>
+          <div class="ammo-count"><span id="ammo">12</span><em> / 48</em></div>
+        </div>
+        <div class="hint">
+          W A S D &nbsp; MOVE<br />MOUSE &nbsp; AIM / FIRE<br />SHIFT &nbsp;
+          SPRINT &nbsp; · &nbsp; R &nbsp; RELOAD
+        </div>
+      </div>
+    </div>
+    <div id="intro">
+      <div class="panel">
+        <h1>NIGHT<br />SHIFT</h1>
+        <p>
+          One block. Three hostiles. The city goes quiet when the street lights
+          come on.
+        </p>
+        <div class="keys">
+          WASD to move &nbsp; / &nbsp; Mouse to aim and fire<br />Shift to
+          sprint &nbsp; / &nbsp; R to reload
+        </div>
+        <button class="start" id="start">ENTER THE BLOCK</button>
+      </div>
+    </div>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+        }
+      }
+    </script>
+    <script type="module">
+      import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+      import { STLLoader } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/STLLoader.js";
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x111713);
+      scene.fog = new THREE.Fog(0x111713, 32, 105);
+      const camera = new THREE.PerspectiveCamera(
+        62,
+        innerWidth / innerHeight,
+        0.1,
+        180,
+      );
+      const renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        powerPreference: "high-performance",
+      });
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      document.querySelector("#game").appendChild(renderer.domElement);
+      scene.add(new THREE.HemisphereLight(0x80909b, 0x141813, 1.4));
+      const moon = new THREE.DirectionalLight(0xb8d1da, 2.5);
+      moon.position.set(-30, 45, 25);
+      moon.castShadow = true;
+      moon.shadow.mapSize.set(1024, 1024);
+      scene.add(moon);
+      const mats = {
+        asphalt: new THREE.MeshStandardMaterial({
+          color: 0x202722,
+          roughness: 0.95,
+        }),
+        concrete: new THREE.MeshStandardMaterial({
+          color: 0x6c776c,
+          roughness: 0.9,
+        }),
+        dark: new THREE.MeshStandardMaterial({
+          color: 0x17201a,
+          roughness: 0.85,
+        }),
+        glass: new THREE.MeshStandardMaterial({
+          color: 0x1f4241,
+          emissive: 0x102d2c,
+          emissiveIntensity: 0.8,
+          roughness: 0.25,
+        }),
+        yellow: new THREE.MeshBasicMaterial({ color: 0xd8ff45 }),
+        red: new THREE.MeshBasicMaterial({ color: 0xff5e54 }),
+        player: new THREE.MeshStandardMaterial({
+          color: 0xd8ff45,
+          roughness: 0.55,
+        }),
+        enemy: new THREE.MeshStandardMaterial({
+          color: 0xe7504b,
+          roughness: 0.7,
+        }),
+      };
+      const box = (w, h, d, mat, x, y, z, parent = scene) => {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+        m.position.set(x, y, z);
+        m.castShadow = true;
+        m.receiveShadow = true;
+        parent.add(m);
+        return m;
+      };
+      box(130, 0.2, 130, mats.asphalt, 0, -0.1, 0);
+      for (let x = -60; x <= 60; x += 16) {
+        box(2, 0.015, 130, mats.concrete, x, 0.015, 0);
+        for (let z = -60; z <= 60; z += 10)
+          box(0.12, 0.025, 4, mats.yellow, x, 0.03, z);
+      }
+      for (let z = -60; z <= 60; z += 16) {
+        box(130, 0.015, 2, mats.concrete, 0, 0.015, z);
+        for (let x = -60; x <= 60; x += 10)
+          box(4, 0.025, 0.12, mats.yellow, x, 0.03, z);
+      }
+      const buildings = [];
+      for (let x = -56; x <= 56; x += 16)
+        for (let z = -56; z <= 56; z += 16) {
+          if (Math.abs(x) < 18 && Math.abs(z) < 18) continue;
+          const h = 5 + Math.random() * 13,
+            w = 9 + Math.random() * 3,
+            d = 9 + Math.random() * 3;
+          const b = box(
+            w,
+            h,
+            d,
+            Math.random() > 0.45 ? mats.dark : mats.concrete,
+            x,
+            h / 2,
+            z,
+          );
+          buildings.push(b);
+          for (let y = 2.5; y < h - 0.8; y += 2.3) {
+            box(
+              0.65,
+              0.45,
+              0.04,
+              Math.random() > 0.35 ? mats.yellow : mats.glass,
+              x - w * 0.35,
+              y,
+              z - d / 2 - 0.025,
+              b.parent,
+            );
+            box(
+              0.65,
+              0.45,
+              0.04,
+              mats.glass,
+              x + w * 0.25,
+              y,
+              z + d / 2 + 0.025,
+              b.parent,
+            );
+          }
+        }
+      for (let i = 0; i < 22; i++) {
+        const x = (Math.random() * 110 - 55) | 0,
+          z = (Math.random() * 110 - 55) | 0;
+        const pole = box(0.18, 4, 0.18, mats.dark, x, 2, z);
+        box(1.2, 0.12, 0.5, mats.yellow, x, 4.1, z);
+      }
+      const player = new THREE.Group();
+      scene.add(player);
+      player.position.set(0, 0, 18);
+      box(1.1, 1.55, 0.75, mats.player, 0, 0.9, 0, player);
+      box(0.8, 0.45, 0.7, mats.dark, 0, 1.8, 0, player);
+      box(0.22, 0.72, 0.22, mats.player, 0.7, 0.9, 0, player);
+      const enemies = [];
+      const npcMaterial = new THREE.MeshStandardMaterial({
+        color: 0xe7504b,
+        roughness: 0.68,
+        metalness: 0.08,
+      });
+      const makeEnemy = (x, z, npcGeometry = null) => {
+        const g = new THREE.Group();
+        g.position.set(x, 0, z);
+        if (npcGeometry) {
+          const model = new THREE.Mesh(npcGeometry, npcMaterial);
+          model.castShadow = true;
+          model.receiveShadow = true;
+          g.add(model);
+        } else {
+          box(1, 1.5, 0.7, mats.enemy, 0, 0.8, 0, g);
+          box(0.7, 0.4, 0.65, mats.dark, 0, 1.72, 0, g);
+          box(0.12, 0.08, 0.05, mats.yellow, -0.2, 1.78, -0.35, g);
+        }
+        g.userData = { health: 2 };
+        scene.add(g);
+        enemies.push(g);
+      };
+      const npcSpawns = [
+        [-14, -13],
+        [15, -19],
+        [22, 11],
+      ];
+      const npcLoader = new STLLoader();
+      npcLoader.load(
+        "./Grand%20Leelo-Esboo.stl",
+        (geometry) => {
+          geometry.computeBoundingBox();
+          const bounds = geometry.boundingBox;
+          const size = new THREE.Vector3();
+          bounds.getSize(size);
+          const center = new THREE.Vector3();
+          bounds.getCenter(center);
+          geometry.translate(-center.x, -bounds.min.y, -center.z);
+          const modelScale = 2.4 / Math.max(size.x, size.y, size.z, 0.001);
+          geometry.scale(modelScale, modelScale, modelScale);
+          npcSpawns.forEach(([x, z]) => makeEnemy(x, z, geometry));
+        },
+        undefined,
+        () => npcSpawns.forEach(([x, z]) => makeEnemy(x, z)),
+      );
+      const cars = [];
+      const carColors = [0xff5e54, 0x4e87a0, 0xe1c34c, 0x8e6b9c];
+      for (let i = 0; i < 7; i++) {
+        const g = new THREE.Group();
+        const horizontal = i % 2 === 0;
+        g.position.set(
+          horizontal ? Math.random() * 100 - 50 : i % 3 ? 24 : -24,
+          0.25,
+          horizontal ? (i % 3 ? 24 : -24) : Math.random() * 100 - 50,
+        );
+        g.rotation.y = horizontal ? 0 : Math.PI / 2;
+        box(
+          3.6,
+          0.65,
+          1.7,
+          new THREE.MeshStandardMaterial({
+            color: carColors[i % 4],
+            roughness: 0.5,
+          }),
+          0,
+          0.4,
+          0,
+          g,
+        );
+        box(1.8, 0.5, 1.3, mats.glass, 0, 0.9, 0, g);
+        cars.push(g);
+        scene.add(g);
+      }
+      const keys = {};
+      let started = false,
+        ammo = 12,
+        health = 100,
+        kills = 0,
+        reload = false,
+        lastShot = 0,
+        toastTimer = 0;
+      let cameraYaw = 0.66,
+        cameraPitch = 0.48;
+      const cameraDistance = 11;
+      const ray = new THREE.Raycaster();
+      addEventListener("keydown", (e) => {
+        keys[e.code] = true;
+        if (e.code === "KeyR" && !reload && ammo < 12) {
+          reload = true;
+          setTimeout(() => {
+            ammo = 12;
+            reload = false;
+            updateHUD();
+          }, 750);
+        }
+      });
+      addEventListener("keyup", (e) => (keys[e.code] = false));
+      document.querySelector("#start").onclick = () => {
+        started = true;
+        document.querySelector("#intro").classList.add("hide");
+        renderer.domElement.requestPointerLock();
+      };
+      addEventListener("mousemove", (e) => {
+        if (document.pointerLockElement === renderer.domElement) {
+          cameraYaw -= e.movementX * 0.004;
+          cameraPitch = THREE.MathUtils.clamp(
+            cameraPitch - e.movementY * 0.003,
+            0.18,
+            0.85,
+          );
+        }
+      });
+      addEventListener("mousedown", (e) => {
+        if (
+          e.button === 0 &&
+          started &&
+          document.pointerLockElement === renderer.domElement
+        )
+          shoot();
+      });
+      function say(text) {
+        const t = document.querySelector("#toast");
+        t.textContent = text;
+        t.style.opacity = 1;
+        toastTimer = 1.3;
+      }
+      function updateHUD() {
+        document.querySelector("#health").style.width = health + "%";
+        document.querySelector("#ammo").textContent = reload ? "..." : ammo;
+        document.querySelector("#ammoBar").style.width =
+          (ammo / 12) * 100 + "%";
+      }
+      function shoot() {
+        if (reload || ammo <= 0) {
+          say("RELOAD");
+          return;
+        }
+        const now = performance.now();
+        if (now - lastShot < 220) return;
+        lastShot = now;
+        ammo--;
+        updateHUD();
+        ray.setFromCamera(new THREE.Vector2(0, 0), camera);
+        const hit = ray.intersectObjects(enemies, true)[0];
+        if (hit) {
+          const target = hit.object.parent;
+          target.userData.health--;
+          target.position.y += 0.05;
+          if (target.userData.health <= 0) {
+            scene.remove(target);
+            enemies.splice(enemies.indexOf(target), 1);
+            kills++;
+            say(kills === 3 ? "BLOCK SECURED" : "TARGET DOWN");
+            if (kills === 3) say("CONTRACT COMPLETE");
+          }
+        }
+      }
+      const clock = new THREE.Clock();
+      function tick() {
+        requestAnimationFrame(tick);
+        const dt = Math.min(clock.getDelta(), 0.05);
+        if (started) {
+          let forward = 0,
+            strafe = 0;
+          if (keys.KeyW) forward += 1;
+          if (keys.KeyS) forward -= 1;
+          if (keys.KeyA) strafe -= 1;
+          if (keys.KeyD) strafe += 1;
+          const len = Math.hypot(forward, strafe) || 1,
+            speed = keys.ShiftLeft ? 8 : 4.8;
+          forward /= len;
+          strafe /= len;
+          player.position.x +=
+            (Math.sin(cameraYaw) * forward + Math.cos(cameraYaw) * strafe) *
+            speed *
+            dt;
+          player.position.z +=
+            (Math.cos(cameraYaw) * forward - Math.sin(cameraYaw) * strafe) *
+            speed *
+            dt;
+          player.position.x = THREE.MathUtils.clamp(player.position.x, -58, 58);
+          player.position.z = THREE.MathUtils.clamp(player.position.z, -58, 58);
+          if (len > 0)
+            player.rotation.y = Math.atan2(
+              Math.sin(cameraYaw) * forward + Math.cos(cameraYaw) * strafe,
+              Math.cos(cameraYaw) * forward - Math.sin(cameraYaw) * strafe,
+            );
+          const horizontal = Math.cos(cameraPitch) * cameraDistance;
+          const desired = new THREE.Vector3(
+            player.position.x + Math.sin(cameraYaw) * horizontal,
+            player.position.y + Math.sin(cameraPitch) * cameraDistance + 2,
+            player.position.z + Math.cos(cameraYaw) * horizontal,
+          );
+          camera.position.lerp(desired, 0.16);
+          camera.lookAt(player.position.x, 1.25, player.position.z);
+          enemies.forEach((e) => {
+            const dist = e.position.distanceTo(player.position);
+            if (dist < 18) {
+              e.lookAt(player.position.x, 1, e.position.z);
+              e.position.x +=
+                ((player.position.x - e.position.x) / Math.max(dist, 1)) *
+                dt *
+                0.7;
+              e.position.z +=
+                ((player.position.z - e.position.z) / Math.max(dist, 1)) *
+                dt *
+                0.7;
+              if (dist < 2.2 && Math.random() < dt * 0.3) {
+                health = Math.max(0, health - 5);
+                updateHUD();
+              }
+            }
+          });
+          if (toastTimer > 0) {
+            toastTimer -= dt;
+            if (toastTimer <= 0)
+              document.querySelector("#toast").style.opacity = 0;
+          }
+        }
+        renderer.render(scene, camera);
+      }
+      tick();
+      updateHUD();
+      addEventListener("resize", () => {
+        camera.aspect = innerWidth / innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(innerWidth, innerHeight);
+      });
+    </script>
+  </body>
+</html>
